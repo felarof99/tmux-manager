@@ -58,6 +58,10 @@ func NewSessionWithCommand(name, startDir string, env []string, command string) 
 	return err
 }
 
+func FirstPaneID(session string) (string, error) {
+	return run("list-panes", "-t", "="+session, "-F", "#{pane_id}")
+}
+
 func KillSession(name string) error {
 	_, err := run("kill-session", "-t", "="+name)
 	return err
@@ -83,6 +87,12 @@ func BindKey(key, command string) error {
 
 func BindKeyRaw(args ...string) error {
 	fullArgs := append([]string{"bind-key"}, args...)
+	_, err := run(fullArgs...)
+	return err
+}
+
+func UnbindKeyRaw(args ...string) error {
+	fullArgs := append([]string{"unbind-key"}, args...)
 	_, err := run(fullArgs...)
 	return err
 }
@@ -151,6 +161,38 @@ func PaneCwd(target string) (string, error) {
 	return run("display-message", "-t", target, "-p", "#{pane_current_path}")
 }
 
+func TogglePaneZoom(target string) error {
+	_, err := run("resize-pane", "-t", target, "-Z")
+	return err
+}
+
+func SplitPaneHorizontal(target, startDir string, before bool, percent int, command string) (string, error) {
+	args := []string{"split-window", "-h"}
+	if before {
+		args = append(args, "-b")
+	}
+	args = append(args, "-t", target, "-p", strconv.Itoa(percent), "-c", startDir, "-P", "-F", "#{pane_id}")
+	if command != "" {
+		args = append(args, command)
+	}
+	return run(args...)
+}
+
+func SelectPane(target string) error {
+	_, err := run("select-pane", "-t", target)
+	return err
+}
+
+func KillPane(target string) error {
+	_, err := run("kill-pane", "-t", target)
+	return err
+}
+
+func SwapPane(source, target string) error {
+	_, err := run("swap-pane", "-s", source, "-t", target)
+	return err
+}
+
 func SetSessionVar(session, key, value string) error {
 	_, err := run("set-option", "-t", session, "@"+key, value)
 	return err
@@ -163,6 +205,27 @@ func GetSessionVar(session, key string) (string, error) {
 func DisplayPopup(client, width, height, command string) error {
 	_, err := run("display-popup", "-c", client, "-w", width, "-h", height, "-E", command)
 	return err
+}
+
+// ClientSize returns the column and row count of the client's terminal.
+func ClientSize(client string) (cols, rows int, err error) {
+	out, err := run("display-message", "-p", "-t", client, "#{client_width} #{client_height}")
+	if err != nil {
+		return 0, 0, err
+	}
+	parts := strings.Fields(out)
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("client size: unexpected output %q", out)
+	}
+	cols, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("client size cols: %w", err)
+	}
+	rows, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("client size rows: %w", err)
+	}
+	return cols, rows, nil
 }
 
 func SetHook(hookName, command string) error {

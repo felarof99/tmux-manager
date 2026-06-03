@@ -2,7 +2,7 @@
 
 **Persistent popup sessions for tmux — vim and shell shadows for any pane.**
 
-Press `Alt+I` for an editor popup, `Alt+B` for a shell popup. The popup follows your pane's working directory.
+Press `Alt+I` for an editor popup, `Alt+O` for a shell popup, `Alt+G` for a lazygit popup, `Alt+U` for a gitui popup, `Ctrl-B U` (tmux prefix + U) to open `nvim DiffviewOpen` on the SHA in your clipboard (copy via `y` in gitui), `Alt+D` to delete all shadow sessions for the current pane, and `Ctrl+Shift+Y` to maximize or restore. The popup follows your pane's working directory.
 
 ## Install
 
@@ -22,7 +22,8 @@ Make sure `~/bin` is on your `PATH`.
 # 1. Bind the popup keys in your tmux session
 grove start
 
-# 2. Press Alt+I for vim popup, Alt+B for shell popup
+# 2. Press Alt+I for vim popup, Alt+O for shell popup, Alt+G for lazygit popup,
+#    Alt+U for gitui popup, Alt+D to delete all, Ctrl+Shift+Y to maximize or restore
 ```
 
 To make the bindings persist across tmux restarts, add to your `.zshrc`:
@@ -46,12 +47,23 @@ Location: `~/.config/grove/config.yaml` (created automatically on first run)
 ```yaml
 shadow:
   popup:
-    width: "80%"
+    target_cols: 320   # comfortable popup width in cols (clamped to client size)
+    target_rows: 70    # comfortable popup height in rows
+    width: "80%"       # legacy fallback if target_cols/rows are 0
     height: "95%"
+    max_width: "100%"  # maximize covers the client so background panes are hidden
+    max_height: "100%"
   keys:
     vim: M-i
-    shell: M-b
+    shell: M-o
+    git: M-g
+    gitui: M-u
+    diffview: U        # bound to tmux prefix (default Ctrl-B), so trigger is prefix+U
+    delete: M-d
+    maximize: M-y      # tmux can't see Ctrl+Shift+<letter>; see Kitty mapping below
 ```
+
+When `target_cols` and `target_rows` are non-zero (the default), the normal popup is sized at `min(client_size, target)` and centered by tmux. If the target would land within 85% of the client's size, the popup expands to 100% to avoid sliver gaps. On an ultrawide (e.g. 49-inch ~512 cols), `target_cols: 320` produces ~19% gaps each side; on a 13-inch laptop (~180 cols), the popup goes full-screen.
 
 Edit the config:
 
@@ -69,6 +81,18 @@ grove config
 
 If the pane's directory has changed since the shadow was created, the shadow is recreated in the new directory. When panes are closed, orphaned shadow sessions are automatically cleaned up.
 
+`Ctrl+Shift+Y` opens a full-screen focus popup, then creates blank 18% gutters inside that popup so the active buffer sits in the centered 64% column. Because the popup covers the full tmux client, the background panes are hidden instead of showing through the side padding. For normal panes, Grove swaps the pane with a temporary placeholder before opening the popup, then swaps it back on restore so the original layout slot is preserved.
+
+### Ctrl+Shift+Y in Kitty
+
+tmux cannot distinguish `Ctrl+Shift+<letter>` from plain `Ctrl+<letter>` in legacy terminal mode — the shift bit never makes it over the wire. Grove's default binding is therefore `M-y` (Alt+y), and Kitty is configured to translate the familiar `Ctrl+Shift+Y` chord into that. Add this to `~/.config/kitty/kitty.conf`:
+
+```conf
+map ctrl+shift+y send_text all \x1by
+```
+
+If you don't use Kitty, either bind `M-y` directly or set `maximize:` in `~/.config/grove/config.yaml` to any tmux-supported key (e.g. `F12`).
+
 ## Usage with Layouts
 
 Grove pairs well with [layouts](https://github.com/shadowfax92/layouts) for tmux pane management:
@@ -85,16 +109,19 @@ layouts apply simple       # 3 windows: editor, claude, shell
 layouts new myproject dev
 
 # Then use grove popups in any pane
-# Alt+I → vim popup, Alt+B → shell popup
+# Alt+I → vim popup, Alt+O → shell popup, Alt+D → delete both,
+# Ctrl+Shift+Y → maximize/restore
 ```
 
 ## CLI
 
 ```sh
 grove start                    # bind popup keys in current tmux server
+grove maximize ...             # (internal) toggle centered maximize popup
 grove config                   # open config in $EDITOR
 grove config --path            # print config file path
 grove shadow toggle vim ...    # (internal) toggle a shadow popup
+grove shadow delete ...        # (internal) delete current pane's shadow popups
 grove shadow cleanup           # (internal) clean up orphaned sessions
 grove --version                # print version
 ```

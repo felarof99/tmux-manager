@@ -18,13 +18,22 @@ type ShadowConfig struct {
 }
 
 type ShadowPopupConfig struct {
-	Width  string `yaml:"width"`
-	Height string `yaml:"height"`
+	Width      string `yaml:"width"`
+	Height     string `yaml:"height"`
+	MaxWidth   string `yaml:"max_width"`
+	MaxHeight  string `yaml:"max_height"`
+	TargetCols int    `yaml:"target_cols"`
+	TargetRows int    `yaml:"target_rows"`
 }
 
 type ShadowKeys struct {
-	Vim   string `yaml:"vim"`
-	Shell string `yaml:"shell"`
+	Vim      string `yaml:"vim"`
+	Shell    string `yaml:"shell"`
+	Git      string `yaml:"git"`
+	Gitui    string `yaml:"gitui"`
+	Diffview string `yaml:"diffview"`
+	Delete   string `yaml:"delete"`
+	Maximize string `yaml:"maximize"`
 }
 
 func DefaultConfigPath() (string, error) {
@@ -74,11 +83,38 @@ func (c *Config) setDefaults() {
 	if c.Shadow.Popup.Height == "" {
 		c.Shadow.Popup.Height = "85%"
 	}
+	if c.Shadow.Popup.MaxWidth == "" {
+		c.Shadow.Popup.MaxWidth = "100%"
+	}
+	if c.Shadow.Popup.MaxHeight == "" {
+		c.Shadow.Popup.MaxHeight = "100%"
+	}
+	if c.Shadow.Popup.TargetCols == 0 {
+		c.Shadow.Popup.TargetCols = 320
+	}
+	if c.Shadow.Popup.TargetRows == 0 {
+		c.Shadow.Popup.TargetRows = 70
+	}
 	if c.Shadow.Keys.Vim == "" {
 		c.Shadow.Keys.Vim = "M-i"
 	}
 	if c.Shadow.Keys.Shell == "" {
-		c.Shadow.Keys.Shell = "M-b"
+		c.Shadow.Keys.Shell = "M-o"
+	}
+	if c.Shadow.Keys.Git == "" {
+		c.Shadow.Keys.Git = "M-g"
+	}
+	if c.Shadow.Keys.Gitui == "" {
+		c.Shadow.Keys.Gitui = "M-u"
+	}
+	if c.Shadow.Keys.Diffview == "" {
+		c.Shadow.Keys.Diffview = "U"
+	}
+	if c.Shadow.Keys.Delete == "" {
+		c.Shadow.Keys.Delete = "M-d"
+	}
+	if c.Shadow.Keys.Maximize == "" {
+		c.Shadow.Keys.Maximize = "M-y"
 	}
 }
 

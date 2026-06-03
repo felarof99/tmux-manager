@@ -15,6 +15,15 @@ func Name(paneID, typ string) string {
 	return fmt.Sprintf("%s/%s/%s", Prefix, typ, id)
 }
 
+func NamesForPane(paneID string) []string {
+	return []string{
+		Name(paneID, "vim"),
+		Name(paneID, "sh"),
+		Name(paneID, "git"),
+		Name(paneID, "gitui"),
+	}
+}
+
 func IsSession(name string) bool {
 	return strings.HasPrefix(name, Prefix+"/")
 }
@@ -64,8 +73,13 @@ func Ensure(sessionName, paneCwd, typ, paneID string) error {
 	}
 
 	command := ""
-	if typ == "vim" {
+	switch typ {
+	case "vim":
 		command = "nvim"
+	case "git":
+		command = "lazygit"
+	case "gitui":
+		command = "gitui"
 	}
 
 	if err := tmux.NewSessionWithCommand(sessionName, paneCwd, env, command); err != nil {
@@ -79,6 +93,19 @@ func Ensure(sessionName, paneCwd, typ, paneID string) error {
 	}
 	if err := tmux.SetSessionVar(sessionName, "shadow_env_version", EnvVersion); err != nil {
 		return fmt.Errorf("storing shadow env version: %w", err)
+	}
+	return nil
+}
+
+// DeleteForPane kills both shadow sessions associated with a parent pane.
+func DeleteForPane(paneID string) error {
+	for _, sessionName := range NamesForPane(paneID) {
+		if !tmux.SessionExists(sessionName) {
+			continue
+		}
+		if err := tmux.KillSession(sessionName); err != nil {
+			return fmt.Errorf("killing shadow session %s: %w", sessionName, err)
+		}
 	}
 	return nil
 }
